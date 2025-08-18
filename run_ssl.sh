@@ -3,10 +3,10 @@
 # run_ssl.sh:                                                                            #
 # This script automatically handles all the 3D-QALAS processing from the BIDS files to   #
 # the parametric maps. It takes a list of subject/session IDs as input and performs a    #
-# set of sanity checks on each B1 map and 3D-QALAS image couple to determine the best    #
+# set of sanity checks on each B1 map and 3D-QALAS image pair to determine the best      #
 # match for each 3D-QALAS run. If the selected B1 map is an AFI image, it estimates the  #
 # actual B1 image from the 2-echo raw images with various TR. Then the selected B1 maps  # 
-# are coregistered with 3D-QALAS images and the selected couple is processed by          # 
+# are coregistered with 3D-QALAS images and the selected pair is processed by            # 
 # submit_CPU.sh script.                                                                  #
 #                                                                                        #
 ##########################################################################################
