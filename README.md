@@ -23,7 +23,7 @@ This wrapper uses the SSL-QALAS scripts (https://github.com/yohan-jun/SSL-QALAS)
 ## Requirements
 conda
 MATLAB
-slurm
+Slurm
 
 ## Installation
 For dependencies and installation, please follow below:
@@ -64,18 +64,20 @@ lic_matlab=''                                    # Leave empty if the licence is
 ```
 
 To run the script processing create a list of participants that you want to process. The easiest way of doing that may be:
+
 ```bash
 cd $dir_bids
 ls sub-*/ses-*/anat/*QALAS*nii.gz | cut -d"/" -f1-2 | sort | uniq > $sub_ses_list
 ```
 
-Once this is done `run_ssl.sh` can be submitted:
+Once this is done `run_ssl.sh` can be executed:
+
 ```bash
 cd $dir_tool
 source run_ssl.sh
 ```
 
-The script is going to automatically pre-process all the provided sessions, which includes the actual AFI B1 map estimation (if aplicable), B1 map and 3D-QALAS matching and coregistration. The matching logic is the following:
+The script is going to automatically pre-process all the provided sessions, except for those that already have a log file in `$dir_tool/logs`. Log files act like lock files in this workflow and have to be removed if a 3D-QALAS run should be reprocessed (see chapter ---------------------!!!!!!!!!!!!!!!!!!!!!!!--CHAPTERNAME--!!!!!!!!!!!!!!!!!!!!!!!-------------------------------------------- [Workflow in `submit_CPU.sh`](#workflow-in-submit_cpush).). The pre-processing includes the actual AFI B1 map estimation (if aplicable), the sanity check for B1 map and 3D-QALAS matching and images coregistration. The matching hierarchy is the following:
 1) Only one possible pair exists
   - If there is exactly one 3D-QALAS and one B1 map then the script assumes they must belong together.
     → Run the pipeline with this pair.
@@ -85,7 +87,7 @@ The script is going to automatically pre-process all the provided sessions, whic
   - the script concludes the pair matches based on shim configuration.
     → Run the pipeline with this pair.
 3) Run number match
-  - If shim info is missing or not unique, but the run number (e.g. run-01, run-02) matches between 3D-QALAS and B1 map, and
+  - If shim info is missing or not unique, but the run number (e.g. run-2) matches between 3D-QALAS and B1 map, and
   - no suspicious time difference was found (runs are saved in order of acquisition), then
   - the script uses run number as the matching criterion.
     → Run the pipeline with this pair.
@@ -94,39 +96,60 @@ The script is going to automatically pre-process all the provided sessions, whic
   - the script cannot confidently match the files.
     → Append the unmatched pair into a log (`no_clear_match.txt`) for manual inspection.
 
-The script automatically submits `submit_CPU.sh` script to the cluster using `slurm`. Each job processes one 3D-QALAS run. The processing can be tracked in `dir_tool/logs`. The job is not going to be resubmitted if a log file for the 3D-QALAS run already exists (see ---------------------!!!!!!!!!!!!!!!!!!!!!!!--CHAPTERNAME--!!!!!!!!!!!!!!!!!!!!!!!--------------------------------------------)
+The pipeline automatically submits `submit_CPU.sh` script to the cluster using Slurm. Each job processes one 3D-QALAS run. The processing can be tracked in `$dir_tool/logs`. 
 
 ## Processing with `exceptions_manual_run_ssl.sh`
-To track the training and validation logs, run the tensorboard as below:
+The workflow in `exceptions_manual_run_ssl.sh` is analogous to that in `run_ssl.sh`, but it skips the sanity check for the matching, assuming that the user has provided an adequate pair. Here the user should not provide a list of sessions to process, but only the names of the selected NIfTI files, the code will extract the subject and session ID automatically:
+
+`
+f_QALAS="sub-*_ses-*_run-?_inv-0_QALAS.nii.gz"   # inv-0 for ungrouped 3D-QALAS NIfTI
+f_fmap="sub-*_ses-*_acq-tr1_run-?_TB1AFI.nii.gz" # acq-tr1 for AFI; acq-famp for TFL
+`
+
+Furthermore, just like in `run_ssl.sh`, paths to different files and directories should be provided:
+
+`
+dir_tool='/path/to/SSL-QALAS-main-crossvendor'   # Path to the folder where SSL-QALAS-main-crossvendor is stored
+dir_bids='/path/to/bids'                         # Path to BIDS where all the participants to be processed are stored
+afi_out=$dir_tool'/afi_b1_maps'                  # Path to the folder where estimated AFI maps should be saved (if applicable) - can be within the tool folder
+dir_conda='/path/to/conda'                       # Path to (mini)conda on your machine
+dir_matlab='/path/to/MATLAB'                     # Path to MATLAB on your machine
+lic_matlab=''                                    # Leave empty if the licence is provided in MATLAB folder (most likely scenario), otherwise provide the license file or the license server
+`
+
+Once this is done `run_ssl.sh` can be executed:
 
 ```bash
-tensorboard --logdir=qalas_log/lightning_logs
+cd $dir_tool
+source exceptions_manual_run_ssl.sh
 ```
 
-## Inference
-To infer the model, run `inference_qalas_map.py` as below:
+The script is going to automatically pre-process the provided pair, unless it already has a log file in `$dir_tool/logs`. Log files act like lock files in this workflow and have to be removed if a 3D-QALAS run should be reprocessed (see chapter ---------------------!!!!!!!!!!!!!!!!!!!!!!!--CHAPTERNAME--!!!!!!!!!!!!!!!!!!!!!!!-------------------------------------------- [Workflow in `submit_CPU.sh`](#workflow-in-submit_cpush).). The pre-processing includes the actual AFI B1 map estimation (if aplicable) and B1 map coregistration with 3D-QALAS images. It automatically submits `submit_CPU.sh` script for processing the selected 3D-QALAS run to the cluster using Slurm. The processing can be tracked in `$dir_tool/logs`. 
 
-```bash
-python inference_qalas_map.py --data_path matlab/h5_data/multicoil_val --state_dict_file qalas_log/checkpoints/epoch=XXX-step=XXXX.ckpt --output_path matlab/h5_data
-```
+## Workflow in `submit_CPU.sh`
+The Slurm batch script `submit_CPU.sh` is designed to be submitted to the cluster, so it performs all the processing automatically. The processing has two possibilities: if a checkpoint for a given 3D-QALAS run exists (the 3D-QALAS processing has been interrupted previously) or if a checkpoint doesn't exist. 
+- When a checkpoint doesn't exist, the processing starts anew. The pipeline executes:
+  - `ssl_qalas_save_h5.m` that converts the 3D-QALAS and B1 maps as well as their metadata into the h5 format that is used for the main SSL-QALAS processing;
+  - `train_qalas.py` that processes the data in the h5 file and estimates the parametric maps;
+  - `inference_qalas_map.py` that produces the parametric maps from the checkpoint with the lowest validation loss;
+  - moving the checkpoint to the archive folder `old/` within each run in `$dir_tool/qalas_log/`, that checkpoint won't be considered if re-processing of the rrun is needed;
+  - 'h5_to_maps.m` that extracts the parametric maps from the h5 file and saves them as NIfTI files in `$dir_tool/matlab/maps`.
+- When a checkpoint exists, the proceessing continues from the available checkpoint. The pipeline executes:
+  - `train_qalas.py` that processes the data in the h5 file and estimates the parametric maps starting from the available checkpoint;
+  - `inference_qalas_map.py` that produces the parametric maps from the checkpoint with the lowest validation loss;
+  - moving the checkpoint to the archive folder `old/` within each run in `$dir_tool/qalas_log/`;
+  - `h5_to_maps.m` that extracts the parametric maps from the h5 file and saves them as NIfTI files in `$dir_tool/matlab/maps`.
 
-The reconstructed maps under `matlab/h5_data/reconstructions` can be read on Matlab using `h5read` matlab function:
+## Output
+Output is saved in `$dir_tool/matlab/maps/sub-*/ses-*/run-*/`, there
+- `T1_map.nii` - T1 parametric map
+- `T2_map.nii` - T2 parametric map
+- `IE_map.nii` - Inversion Efficiency parametric map
+- `PD_map.nii` - Proton Density parametric map
 
-```bash
-T1 = h5read('train_data.h5','/reconstruction_t1');
-T2 = h5read('train_data.h5','/reconstruction_t2');
-PD = h5read('train_data.h5','/reconstruction_pd');
-IE = h5read('train_data.h5','/reconstruction_ie');
-```
-
-## Generating Training and Validation Data
-To make .h5 file, run `ssl_qalas_save_h5_from_dicom.m` matlab file
-
-If the same subject data is used for validation (i.e., subject specific training and validation), copy `train_data.h5` and paste under `matlab/h5_data/multicoil_val`.
-
-(Optional) To compare the SSL-QALAS with the reference maps (e.g., dictionary matching results), please put them under `matlab/map_data` (format: .mat file which may contain T1_map, T2_map, PD_map, IE_map, and B1_map)
-
-Sample data can be found [here](https://www.dropbox.com/scl/fo/0lqsttrqavmfxgq32ptkd/h?rlkey=z6f2cnt3243b7us0izac79zj6&dl=0)
+## Modifications and future work
+There are possible modifications to the pipeline available to the user:
+- The output can be BIDS-compliant. For this `h5_to_maps.m` has to be modified at the very end (l. 86-89) to fit your desired naming convention. For BIDS `
 
 ## Cite
 If you have any questions/comments/suggestions, please contact at yjun@mgh.harvard.edu
