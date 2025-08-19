@@ -1,14 +1,13 @@
 function [ ] = h5_to_maps(sub_ses, f_QALAS, dir_bids)
 %%
 
-%clear; clc; close all;
 addpath(genpath('utils'));
 
 %% Reading
 
-%sub_ses_run=sub_ses
 pattern = 'run-\d+';
 sub_ses_run = [sub_ses, '/', char(regexp(f_QALAS, pattern, 'match'))];
+sub_ses_run_ = strrep(sub_ses_run, '/', '_');
 
 display(sub_ses_run)
 
@@ -81,11 +80,11 @@ info_NIFTI.MultiplicativeScaling=1;
 
 %% Saving
 
-mkdir(['maps/',sub_ses_run])
+mkdir(['maps/',sub_ses, '/anat'])
 
-niftiwrite(T1,['maps/',sub_ses_run,'/T1_map'], info_NIFTI)
-niftiwrite(T2,['maps/',sub_ses_run,'/T2_map'], info_NIFTI)
-niftiwrite(PD,['maps/',sub_ses_run,'/PD_map'], info_NIFTI)
-niftiwrite(IE,['maps/',sub_ses_run,'/IE_map'], info_NIFTI)
+niftiwrite(T1,['maps/',sub_ses,'/anat/',sub_ses_run_,'_T1map'], info_NIFTI, "Compressed", true)
+niftiwrite(T2,['maps/',sub_ses,'/anat/',sub_ses_run_,'_T2map'], info_NIFTI, "Compressed", true)
+niftiwrite(PD,['maps/',sub_ses,'/anat/',sub_ses_run_,'_PDmap'], info_NIFTI, "Compressed", true)
+niftiwrite(IE,['maps/',sub_ses,'/anat/',sub_ses_run_,'_IEmap'], info_NIFTI, "Compressed", true)
 
 
