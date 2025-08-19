@@ -9,7 +9,7 @@
 ##########################################################################################
 
 
-dir_tool='/path/to/SSL-QALAS-main-crossvendor'   # Path to the folder where SSL-QALAS-main-crossvendor is stored
+dir_tool='/path/to/SSL-QALAS-main-crossvendor'   # Path to the folder where SSL-QALAS-crossvendor is stored
 sub_ses_list=$dir_tool'/lists/sub_ses_list.txt'  # Path to the list of sessions to process (each entry should be a BIDS-compliant name, i.e. "sub-*/ses-*") - can be within the tool folder
 dir_bids='/path/to/bids'                         # Path to BIDS where all the participants to be processed are stored
 
