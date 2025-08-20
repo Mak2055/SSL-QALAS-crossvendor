@@ -269,7 +269,7 @@ h5writeatt(file_name,'/','max_b1',att_max_b1);
 h5writeatt(file_name,'/','patient_id',att_patient);
 h5writeatt(file_name,'/','acquisition',att_seq);
 
-# Provide metadata describing the parameters of the 3D-QALAS sequence 
+% Provide metadata describing the parameters of the 3D-QALAS sequence 
 % For now it assumes that there are only three sequences, one for each vendor -> hardcoded
 
 if contains(json_contents.Manufacturer, 'SIEMENS', 'IgnoreCase', true)
