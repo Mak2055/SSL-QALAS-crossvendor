@@ -19,7 +19,7 @@ while read p; do sub_ses=$(echo $p)   # Read a line from the session list and st
         # === Identify relevant files for this session ===
         cd $dir_bids
         list_QALAS=$(ls "$sub_ses/anat/"*inv-0*_QALAS.nii.gz 2>/dev/null || true)                   # List 3D-QALAS NIfTI files for this session
-        [[ -z "$list_QALAS" ]] && list_QALAS=$(ls "$sub_ses/anat/"*_QALAS.json 2>/dev/null || true) # List 3D-QALAS nested NIfTI files for this session (different inversions are concatinated) 
+        [[ -z "$list_QALAS" ]] && list_QALAS=$(ls "$sub_ses/anat/"*_QALAS.nii.gz 2>/dev/null || true) # List 3D-QALAS nested NIfTI files for this session (different inversions are concatinated) 
 
         # === If no QALAS file found ===
         if [[ -z "$list_QALAS" ]]; then
