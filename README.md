@@ -179,11 +179,12 @@ There are possible modifications to the pipeline available to the user:
 - Currently, the log files also act as lock files (see [Processing with `run_ssl.sh`](#processing-with-run_sslsh), [Processing with `exceptions_manual_run_ssl.sh`](#processing-with-exceptions_manual_run_sslsh) and [Clean up with `post_fix_failed_logs.sh`](#clean-up-with-post_fix_failed_logssh)). This is an imperfect practice that can be changed in `run_ssl.sh` (l. 144).
 
 Some additional work can be done in the future to improve the experience and make the tool more flexible:
-- Currently, the actual AFI B1 map is being estimated despite whether it was or wasn't used. The estimation may only be done if the B1 map passed the sanity check (see [Processing with `run_ssl.sh`](#processing-with-run_sslsh)).
-- Currently, only NIfTI images are accepted as input. Adding DICOM images as input with reading the metadata from DICOM headers is possible.
-- Currently, processing is happening on the CPU, implementing processing on the GPU is possible.
+- The actual AFI B1 map is being estimated despite whether it was or wasn't used. The estimation may only be done if the B1 map passed the sanity check (see [Processing with `run_ssl.sh`](#processing-with-run_sslsh)).
+- Only NIfTI images are accepted as input. Adding DICOM images as input with reading the metadata from DICOM headers is possible.
+- Processing is happening on the CPU, implementing processing on the GPU is possible.
+- Processing is not terminated in case of an error.
 - Implementation of sanity checks in `exceptions_manual_run_ssl.sh` (comparing the subject and session IDs in the B1 map and 3D-QALAS) can be implemented.
-- Currently, only one combination of 3D-QALAS and B1 map is considered in log (lock) files, which may be an issue if a user wants to determine the optimal combination by actually running SSL-QALAS processing. Adding more flexibility to log file titles and output may be useful.
+- Only one combination of 3D-QALAS and B1 map is considered in log (lock) files, which may be an issue if a user wants to determine the optimal combination by actually running SSL-QALAS processing. Adding more flexibility to log file titles and output may be useful.
 - Expanded or more flexible input BIDS naming logic is possible.
 - More comprehensive files in `overview/` are needed
 
