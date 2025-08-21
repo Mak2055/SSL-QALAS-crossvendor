@@ -3,22 +3,56 @@
 ![Alt text](figure/SSL-QALAS.jpg?raw=true "SSL-QALAS")
 
 
-This is the wrapper script for **"SSL-QALAS: Self-Supervised Learning for Rapid Multiparameter Estimation in Quantitative MRI Using 3D-QALAS"**.
+This is the crossvendor wrapper script for **"SSL-QALAS: Self-Supervised Learning for Rapid Multiparameter Estimation in Quantitative MRI Using 3D-QALAS"**. 
 
 The original SSL-QALAS paper is published at [Magnetic Resonance in Medicine](https://doi.org/10.1002/mrm.29786).
 
 The baseline code is based on fastMRI code, which is forked from [here](https://github.com/facebookresearch/fastMRI).
 
+The current version of the script is being used in [HBCD](https://hbcdstudy.org) study.
+
 ## Description
-This wrapper uses the SSL-QALAS [scripts](https://github.com/yohan-jun/SSL-QALAS) and builds upon them:
+SSL-QALAS-crossvendor takes raw 3D-QALAS and B1 map NIfTI files and outputs T1, T2, PD and IE parametric maps. The tool is accounting for variations in the 3D-QALAS sequence across different MRI vendors, as well as differences in the corresponding B1 mapping approaches (AFI on GE and Philips systems, and TFL on Siemens systems). This wrapper uses the SSL-QALAS [scripts](https://github.com/yohan-jun/SSL-QALAS) and builds upon them:
   - BIDS-compliant processing of NIfTI 3D-QALAS and the corresponding B1 maps into the parametric map.
-  - Added multivendor processing: the script looks into the corresponding .json files to choose the appropriate processing parameters (based on the vendor, assuming no modifications beyond resolution were made to the sequence ).
+  - Added multivendor processing: the script looks into the corresponding .json files to choose the appropriate processing parameters (based on the vendor, assuming no modifications beyond resolution were made to the sequence).
   - Added estimation of the actual AFI B1 maps from the 2-echo raw images.
   - Added B1 maps coregistration with 3D-QALAS images as described [here](https://pubmed.ncbi.nlm.nih.gov/17191242/).
   - Simple and straightforward usage with the possibility for automated and manual selection of 3D-QALAS and B1 map pairs.
   - CPU instead of GPU processing.
   - Automatic converting of the parametric maps from h5 to NIfTI format (see [Modifications and future work](#modifications-and-future-work) for possible modifications).
   - Output of the processing summary.
+
+## Overview
+This is the general idea of this README with straightforward references to chapters:
+- The first step is [installing](#installation) the environment:
+```bash
+conda env create -f environment.yml
+conda activate ssl_qalas_crossvendor
+pip install -e .
+```
+
+- If your goal is to process a batch of sessions at once, use [`run_ssl.sh`](#processing-with-run_sslsh):
+```bash
+# Go to the BIDS folder
+cd $dir_bids
+# Create the list of participants
+ls sub-*/ses-*/anat/*QALAS*nii.gz | cut -d"/" -f1-2 | sort | uniq > $sub_ses_list
+# Go to the tool folder
+cd $dir_tool
+# Run processing
+source run_ssl.sh
+```
+
+- If you want to manually match B1 map and 3D-QALAS pairs, use [`exceptions_manual_run_ssl.sh`](#processing-with-exceptions_manual_run_sslsh):
+```bash
+# Provide a 3D-QALAS and B1 map pair in exceptions_manual_run_ssl.sh
+# Go to the tool folder
+cd $dir_tool
+# Run processing
+source exceptions_manual_run_ssl.sh
+```
+
+- Whichever method you choose, you will either get the [output](#output) or run [`post_fix_failed_logs.sh`](#clean-up-with-post_fix_failed_logssh) to clean up, fix bugs and re-run the processing.
 
 ## Requirements
 - [Conda](https://docs.conda.io/) for managing Python environments
@@ -28,7 +62,7 @@ This wrapper uses the SSL-QALAS [scripts](https://github.com/yohan-jun/SSL-QALAS
 No minimal requirements are known, the pipeline has been tested with miniconda3, anaconda3 and MATLAB 2023a.
 
 ## Installation
-For dependencies and installation, please follow below:
+The installation of the environment is only needed once, before executing the tool for the first time. It is done with the following script:
 
 ```bash
 conda env create -f environment.yml
@@ -36,13 +70,7 @@ conda activate ssl_qalas_crossvendor
 pip install -e .
 ```
 
-Note: the environment is different than the one in the original SSL-QALAS repository 
-
-## General idea
-This is the general idea of this README with straightforward references to chapters:
-- If your goal is to process a batch of sessions at once, use [`run_ssl.sh`](#processing-with-run_sslsh).
-- If you want to manually match B1 map and 3D-QALAS pairs, use [`exceptions_manual_run_ssl.sh`](#processing-with-exceptions_manual_run_sslsh).
-- Whichever method you choose, you will either get the [output](#output) or run [`post_fix_failed_logs.sh`](#clean-up-with-post_fix_failed_logssh) to clean up, fix bugs and re-run the processing.
+Note: the environment is different than the one in the original SSL-QALAS repository.
 
 ## BIDS standard assumptions for running SSL-QALAS-crossvendor
 Your input data should be BIDS-compliant with the following naming logic:
@@ -125,7 +153,7 @@ dir_matlab='/path/to/MATLAB'                     # Path to MATLAB on your machin
 lic_matlab=''                                    # Leave empty if the licence is provided in MATLAB folder (most likely scenario), otherwise provide the license file or the license server
 ```
 
-Once this is done `run_ssl.sh` can be executed:
+Once this is done `exceptions_manual_run_ssl.sh` can be executed:
 
 ```bash
 cd $dir_tool
@@ -183,10 +211,11 @@ Some additional work can be done in the future to improve the experience and mak
 - Only NIfTI images are accepted as input. Adding DICOM images as input with reading the metadata from DICOM headers is possible.
 - Processing is happening on the CPU, implementing processing on the GPU is possible.
 - Processing is not terminated in case of an error.
+- Remove stochasticity from B1 map coregistration.
 - Implementation of sanity checks in `exceptions_manual_run_ssl.sh` (comparing the subject and session IDs in the B1 map and 3D-QALAS) can be implemented.
 - Only one combination of 3D-QALAS and B1 map is considered in log (lock) files, which may be an issue if a user wants to determine the optimal combination by actually running SSL-QALAS processing. Adding more flexibility to log file titles and output may be useful.
 - Expanded or more flexible input BIDS naming logic is possible.
-- More comprehensive files in `overview/` are needed
+- More comprehensive files in `overview/` are needed.
 
 ## Cite
 If you have any questions/comments/suggestions, please contact at yjun@mgh.harvard.edu or maksimsl@uio.no
@@ -205,6 +234,8 @@ If you use the SSL-QALAS code in your project, please cite the following paper:
   publisher={Wiley Online Library}
 }
 ```
+
+The paper relevant to the crossvendor processing is coming soon
 
 If you use the AFI B1 map and performed the actual B1 map estimation, please cite the following paper:
 
