@@ -119,15 +119,7 @@ if load_b1_map == 1
     if input_type == 1 % for DICOM data
         B1_map = single(dicomread_dir(b1path));
     elseif input_type == 2 % for NIFTI data
-        if contains(json_contents.Manufacturer, 'Siemens', 'IgnoreCase', true)
-            loaded_nifti_b1=load_nifti(b1path);
-            B1_map = single(loaded_nifti_b1.vol);
-            % NIFTI are rotated compared to DICOM files, here rotation is done
-            % to bring NIFTI into the same space
-            B1_map = permute(B1_map,[2,1,3]);
-            B1_map = flip(B1_map, 1);
-            B1_map = flip(B1_map, 3);
-        else
+        if contains(json_contents.Manufacturer, 'GE', 'IgnoreCase', true)
             loaded_nifti_b1=load_nifti(b1path); % For whatever reason the AFI estimation code rotates Philips maps into the same orientation like GE
             B1_map = single(loaded_nifti_b1.vol);
             % NIFTI are rotated compared to DICOM files, here rotation is done
@@ -135,6 +127,14 @@ if load_b1_map == 1
             B1_map = permute(B1_map,[3,2,1]);
             B1_map = flip(B1_map, 1);
             B1_map = flip(B1_map, 2);
+            B1_map = flip(B1_map, 3);
+        else
+            loaded_nifti_b1=load_nifti(b1path);
+            B1_map = single(loaded_nifti_b1.vol);
+            % NIFTI are rotated compared to DICOM files, here rotation is done
+            % to bring NIFTI into the same space
+            B1_map = permute(B1_map,[2,1,3]);
+            B1_map = flip(B1_map, 1);
             B1_map = flip(B1_map, 3);
         end
     end
