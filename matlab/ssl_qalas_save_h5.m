@@ -1,6 +1,6 @@
 function [ ] = ssl_qalas_save_h5_from_dicom(sub_ses, f_QALAS, f_fmap, dir_bids, dir_tool)
 
-%% Prepare tje environment
+%% Prepare the environment
 
 %clear; clc; close all;
 set(0,'DefaultFigureWindowStyle','docked')
@@ -120,7 +120,7 @@ if load_b1_map == 1
         B1_map = single(dicomread_dir(b1path));
     elseif input_type == 2 % for NIFTI data
         if contains(json_contents.Manufacturer, 'GE', 'IgnoreCase', true)
-            loaded_nifti_b1=load_nifti(b1path); % For whatever reason the AFI estimation code rotates Philips maps into the same orientation like GE
+            loaded_nifti_b1=load_nifti(b1path); 
             B1_map = single(loaded_nifti_b1.vol);
             % NIFTI are rotated compared to DICOM files, here rotation is done
             % to bring NIFTI into the same space
