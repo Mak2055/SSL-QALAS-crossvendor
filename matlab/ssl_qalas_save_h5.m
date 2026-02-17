@@ -14,7 +14,7 @@ ffold = [dir_tool, '/coreg_b1_maps/'];
 pattern = 'run-\d+';
 sub_ses_run = [sub_ses, '/', char(regexp(f_QALAS, pattern, 'match'))];
 
-%% Set output variabøes
+%% Set output variables
 
 savepath = [dir_tool, '/matlab/h5_data/', strrep(sub_ses_run, '-', ''), '/multicoil_train/'];
 savename = 'train_data.h5';
