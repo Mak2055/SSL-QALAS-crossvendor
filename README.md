@@ -80,8 +80,8 @@ anat/
     sub-*_ses-*_*_run-*_inv-[0-4]_QALAS.[nii.gz;json]          # For ungrouped 3D-QALAS images, where each inverse is a separate NIfTI file
     sub-*_ses-*_*_run-*_QALAS.[nii.gz;json]                    # For nested 3D-QALAS images, where all inverses are concatenated in one NIfTI file
 fmap/
-    sub-*_ses-*_*_acq-tr[1,2]_run-*_TB1AFI.[nii.gz;json]       # For raw AFI B1 maps
-    sub-*_ses-*_*_acq-[anat,famp]_run-*_TB1TFL.[nii.gz;json]   # For TFL B1 maps, acq-famp is used for processing, acq-anat is used for coregistration
+    sub-*_ses-*_*_acq-tr[1;2]_run-*_TB1AFI.[nii.gz;json]       # For raw AFI B1 maps
+    sub-*_ses-*_*_acq-[anat;famp]_run-*_TB1TFL.[nii.gz;json]   # For TFL B1 maps, acq-famp is used for processing, acq-anat is used for coregistration
     sub-*_ses-*_*_run-*_part-[mag;phase]_TB1TFL.[nii.gz;json]  # For TFL B1 maps (alternative), acq-phase is used for processing, part-mag is used for coregistration
 ```
 
