@@ -20,7 +20,7 @@ sub_ses_list=$dir_tool'/lists/sub_ses_list.txt'  # Path to the list of sessions 
 dir_bids='/path/to/bids'                         # Path to BIDS where all the participants to be processed are stored
 afi_out=$dir_tool'/afi_b1_maps'                  # Path to the folder where estimated AFI maps should be saved (if applicable) - can be saved within the tool folder
 sum_out=$dir_tool'/overview'                     # Path to the folder where general summaries are stored - can be saved within the tool folder
-dir_conda='/path/to/conda'                       # Path to (mini)conda on your machine
+dir_conda='/path/to/conda'                       # Path to (mini)conda or to a standalone environment directory (if the environment is not registered in Conda, see Troubleshooting in README.md).
 dir_matlab='/path/to/MATLAB'                     # Path to MATLAB on your machine
 lic_matlab=''                                    # Leave empty if the licence is provided in MATLAB folder (most likely scenario), otherwise provide the license file or the license server
 
