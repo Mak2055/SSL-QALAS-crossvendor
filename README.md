@@ -94,7 +94,7 @@ sub_ses_list=$dir_tool'/lists/sub_ses_list.txt'  # Path to the list of sessions 
 dir_bids='/path/to/bids'                         # Path to BIDS where all the participants to be processed are stored
 afi_out=$dir_tool'/afi_b1_maps'                  # Path to the folder where estimated AFI maps should be saved (if applicable) - can be saved within the tool folder
 sum_out=$dir_tool'/overview'                     # Path to the folder where general summaries are stored - can be saved within the tool folder
-dir_conda='/path/to/conda'                       # Path to (mini)conda on your machine
+dir_conda='/path/to/conda'                       # Path to (mini)conda or to a standalone environment directory (if the environment is not registered in Conda, see [Troubleshooting](#troubleshooting)).
 dir_matlab='/path/to/MATLAB'                     # Path to MATLAB on your machine
 lic_matlab=''                                    # Leave empty if the licence is provided in MATLAB folder (most likely scenario), otherwise provide the license file or the license server
 ```
@@ -148,7 +148,7 @@ Furthermore, just like in `run_ssl.sh`, paths to different files and directories
 dir_tool='/path/to/SSL-QALAS-main-crossvendor'   # Path to the folder where SSL-QALAS-main-crossvendor is stored
 dir_bids='/path/to/bids'                         # Path to BIDS where all the participants to be processed are stored
 afi_out=$dir_tool'/afi_b1_maps'                  # Path to the folder where estimated AFI maps should be saved (if applicable) - can be within the tool folder
-dir_conda='/path/to/conda'                       # Path to (mini)conda on your machine
+dir_conda='/path/to/conda'                       # Path to (mini)conda or to a standalone environment directory (if the environment is not registered in Conda, see [Troubleshooting](#troubleshooting)).
 dir_matlab='/path/to/MATLAB'                     # Path to MATLAB on your machine
 lic_matlab=''                                    # Leave empty if the licence is provided in MATLAB folder (most likely scenario), otherwise provide the license file or the license server
 ```
@@ -198,6 +198,14 @@ dir_tool='/path/to/SSL-QALAS-main-crossvendor'   # Path to the folder where SSL-
 sub_ses_list=$dir_tool'/lists/sub_ses_list.txt'  # Path to the list of sessions to process (each entry should be a BIDS-compliant name, i.e. "sub-*/ses-*") - can be within the tool folder
 dir_bids='/path/to/bids'                         # Path to BIDS where all the participants to be processed are stored
 ```
+
+## Troubleshooting 
+- Environment instalation on air-gapped or restricted systems
+  - If your system does not allow creating a Conda environment directly (e.g., no internet access), the environment can be created on another machine and transferred (e.g., using conda-pack). The unpacked environment can be used with or without registering it in Conda.
+- Using a standalone environment outside Conda
+  - If the environment cannot be added to your local Conda installation, place the unpacked environment folder alongside the tool and provide the path to that environment when running the tool (instead of the path to Conda).
+- Unexpected ssl_qalas_crossvendor package versions
+  - If you encounter unexpected package versions, ensure that user site-packages are not shadowing the environment. This can be done by disabling user site-packages: `export PYTHONNOUSERSITE=1`, the line may be added directly into Conda environment activation file.
 
 ## Modifications and future work
 There are possible modifications to the pipeline available to the user:
