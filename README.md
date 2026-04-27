@@ -9,7 +9,7 @@ The original SSL-QALAS paper is published at [Magnetic Resonance in Medicine](ht
 
 The baseline code is based on fastMRI code, which is forked from [here](https://github.com/facebookresearch/fastMRI).
 
-The current version of the script is being used in [HBCD](https://hbcdstudy.org) study.
+The current version (Version 1.0.0) of the script is being used for [HBCD](https://hbcdstudy.org) study.
 
 ## Description
 SSL-QALAS-crossvendor takes raw 3D-QALAS and B1 map NIfTI files and outputs T1, T2, PD and IE parametric maps. The tool is accounting for variations in the 3D-QALAS sequence across different MRI vendors, as well as differences in the corresponding B1 mapping approaches (AFI on GE and Philips systems, and TFL on Siemens systems). This wrapper uses the SSL-QALAS [scripts](https://github.com/yohan-jun/SSL-QALAS) and builds upon them:
