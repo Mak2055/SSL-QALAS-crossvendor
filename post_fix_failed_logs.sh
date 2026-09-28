@@ -26,7 +26,7 @@ while read p; do sub_ses=$(echo $p)   # Read a line from the session list and st
               echo "No QALAS file for $sub_ses was found"
 
         # === If maps have already been generated for this session ===
-        elif [[ -e $dir_tool/matlab/maps/$sub_ses/ ]]; then
+        elif [[ -e $dir_tool/main_data/maps/$sub_ses/ ]]; then
               echo "$sub_ses has already been submitted"
 
         # === Otherwise, check each QALAS run ===
@@ -38,8 +38,8 @@ while read p; do sub_ses=$(echo $p)   # Read a line from the session list and st
                  sub_ses_run=${sub_ses}'/'$(echo $f_QALAS | grep -o 'run-[1-9]')  # Combine sub/ses with run number
 
                  # === If corresponding HDF5 reconstruction exists ===
-                 if [[ -e $dir_tool/matlab/h5_data/${sub_ses_run//-/}/reconstructions/val_data.h5 ]]; then
-                    # MATLAB processing command (currently commented out)
+                 if [[ -e $dir_tool/main_data/h5_data/${sub_ses_run//-/}/reconstructions/val_data.h5 ]]; then
+                    # Map-extraction command (currently commented out)
                     echo $f_QALAS   # Just print file name
 
                  # === If HDF5 file missing ===

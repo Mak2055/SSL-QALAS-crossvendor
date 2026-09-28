@@ -21,8 +21,8 @@ dir_bids='/path/to/bids'                         # Path to BIDS where all the pa
 afi_out=$dir_tool'/afi_b1_maps'                  # Path to the folder where estimated AFI maps should be saved (if applicable) - can be saved within the tool folder
 sum_out=$dir_tool'/overview'                     # Path to the folder where general summaries are stored - can be saved within the tool folder
 dir_conda='/path/to/conda'                       # Path to (mini)conda or to a standalone environment directory (if the environment is not registered in Conda, see Troubleshooting in README.md).
-dir_matlab='/path/to/MATLAB'                     # Path to MATLAB on your machine
-lic_matlab=''                                    # Leave empty if the licence is provided in MATLAB folder (most likely scenario), otherwise provide the license file or the license server
+dir_freesurfer='/path/to/freesurfer'             # Path to FreeSurfer on your machine
+no_b1_map=0                                      # Set to 1 if no B1+ fieldmaps were acquired at all for this dataset: skips the B1+ map search/matching/coregistration entirely and processes every 3D-QALAS run with a uniform (all-1.0) B1_map instead. Leave at 0 (RECOMMENDED) for normal processing with real B1+ maps.
 
 # === PREPARATION ===
 
@@ -31,6 +31,10 @@ mkdir -p "$sum_out" "$dir_tool/logs"
 
 # Clear previous summary output files
 rm -f "$sum_out"/*
+
+# Source FreeSurfer
+export FREESURFER_HOME=$dir_freesurfer
+source $FREESURFER_HOME/SetUpFreeSurfer.sh
 
 # === HELPER FUNCTIONS ===
 
@@ -56,6 +60,8 @@ function get_qalas_jsons_lists {
 # Activate the conda environment used for QALAS processing
 function activate_env {
     source "$dir_conda/bin/activate" ssl_qalas_crossvendor
+    export PYTHONNOUSERSITE=1
+    conda-unpack
 }
 
 # Deactivate the conda environment
@@ -147,15 +153,63 @@ function run_coregistration_and_submit {
     else
         f_fmap=$(basename "$fmap_coreg_output")
         echo "$json_fmap;$json_QALAS" >> "$4" # Append the submitted runs to the log
-        sbatch --output="$dir_tool/logs/$f_QALAS.log" "$dir_tool/submit_CPU.sh" "$sub_ses" "$f_QALAS" "$f_fmap" "$dir_bids" "$dir_tool" "$dir_conda" "$dir_matlab" "$lic_matlab" 
+        sbatch --output="$dir_tool/logs/$f_QALAS.log" "$dir_tool/submit_CPU.sh" "$sub_ses" "$f_QALAS" "$f_fmap" "$dir_bids" "$dir_tool" "$dir_conda" "$dir_freesurfer"
         echo $sub_ses 'submitted successfully'
         echo "---------------------------------------------"
     fi
 }
 
+# Submit a 3D-QALAS run directly, with no B1+ map and no coregistration step
+# (used only when no_b1_map=1). "NONE" is passed as f_fmap in place of a real
+# B1 map filename; submit_CPU.sh and ssl_qalas_save_h5.py recognize this
+# sentinel and fall back to a uniform B1_map of 1.0 instead of loading a file.
+function submit_no_b1map {
+    local sub_ses="$1" f_QALAS="$2"
+
+    if [[ -e "$dir_tool/logs/$f_QALAS.log" ]]; then
+        echo "$f_QALAS has already been submitted"
+    else
+        sbatch --output="$dir_tool/logs/$f_QALAS.log" "$dir_tool/submit_CPU.sh" "$sub_ses" "$f_QALAS" "NONE" "$dir_bids" "$dir_tool" "$dir_conda" "$dir_freesurfer"
+        echo $sub_ses 'submitted successfully (no_b1_map=1, no B1 map used)'
+        echo "---------------------------------------------"
+    fi
+}
+
+# Subject/session processing logic used when no_b1_map=1: no B1+ fieldmap
+# search, matching, AFI estimation or coregistration -- every 3D-QALAS run
+# found for this session is submitted straight away.
+function process_subject_no_b1map {
+    local sub_ses="$1"
+
+    qalas_jsons_list=$(get_qalas_jsons_lists "$sub_ses")
+    if [[ -z "$qalas_jsons_list" ]]; then
+        echo "No 3D-QALAS image found for" $sub_ses
+        return
+    fi
+
+    for json_QALAS in $qalas_jsons_list; do
+        qalas=$(echo "$json_QALAS" | grep -oP 'sub.*/.*\.json' | sed 's/\.json$/.nii.gz/')
+        if [ ! -f $dir_bids/$qalas ]; then
+            qalas=$(echo "$json_QALAS" | grep -oP 'sub.*/.*\.json' | sed 's/\.json$/.nii/') # Try without .gz
+        fi
+        f_QALAS="${qalas##*/}"
+        echo 'no_b1_map=1: processing 3D-QALAS run without a B1 map:'
+        echo "$f_QALAS"
+        submit_no_b1map "$sub_ses" "$f_QALAS"
+    done
+}
+
 # Main subject/session processing logic
 function process_subject {
     local sub_ses="$1"
+
+    # If no B1+ fieldmaps exist for this dataset at all, skip straight to the
+    # no-B1-map path above and leave everything below (the normal B1+
+    # search/matching/coregistration logic) completely untouched.
+    if [[ "$no_b1_map" == 1 ]]; then
+        process_subject_no_b1map "$sub_ses"
+        return
+    fi
 
     # Try different patterns to find candidate fieldmaps
     local fmap_patterns=(
@@ -192,10 +246,13 @@ function process_subject {
     for json_fmap in $fmap_jsons_list; do
         shim_fmap=$(jq -r ".ShimSetting" "$json_fmap")  # Extract shim info
         fmap=$(echo "$json_fmap" | grep -oP 'sub.*/.*\.json' | sed 's/\.json$/.nii.gz/')
+        if [ ! -f $dir_bids/$fmap ]; then
+            fmap=$(echo "$json_fmap" | grep -oP 'sub.*/.*\.json' | sed 's/\.json$/.nii/') # Try without .gz
+        fi
         f_fmap="${fmap##*/}"
 
         # === Handle AFI (2-echo) fieldmaps ===
-        if [[ "$f_fmap" == *TB1AFI.nii.gz ]]; then
+        if [[ "$f_fmap" == *TB1AFI.nii* ]]; then
             fmap_tr2=$(echo "$fmap" | sed 's/acq-tr1/acq-tr2/')
             path_fmap_output="$afi_out/$sub_ses/fmap/$(basename "$f_fmap" | sed 's/acq-tr1/acq-est/')"
 
@@ -215,7 +272,10 @@ function process_subject {
         # === Match with QALAS images ===
         for json_QALAS in $qalas_jsons_list; do
             shim_QALAS=$(jq -r ".ShimSetting" "$json_QALAS")
-            qalas=$(echo "$json_QALAS" | grep -oP 'ses.*\.json' | sed 's/\.json$/.nii.gz/')
+            qalas=$(echo "$json_QALAS" | grep -oP 'sub.*/.*\.json' | sed 's/\.json$/.nii.gz/')
+            if [ ! -f $dir_bids/$qalas ]; then
+                qalas=$(echo "$json_QALAS" | grep -oP 'sub.*/.*\.json' | sed 's/\.json$/.nii/') # Try without .gz
+            fi
             f_QALAS="${qalas##*/}"
 
             # === Shim matching logic ===
@@ -304,5 +364,3 @@ cat "$sum_out/no_clear_match.txt" | cut -d"/" -f1-2 | sort | uniq
 
 # Return to tool directory
 cd "$dir_tool"
-
-

@@ -1,4 +1,3 @@
-
 ##########################################################################################
 #                                                                                        #
 # exceptions_manual_run_ssl.sh:                                                          #
@@ -21,8 +20,7 @@ dir_tool='/path/to/SSL-QALAS-main-crossvendor'   # Path to the folder where SSL-
 dir_bids='/path/to/bids'                         # Path to BIDS where all the participants to be processed are stored
 afi_out=$dir_tool'/afi_b1_maps'                  # Path to the folder where estimated AFI maps should be saved (if applicable) - can be within the tool folder
 dir_conda='/path/to/conda'                       # Path to (mini)conda or to a standalone environment directory (if the environment is not registered in Conda, see Troubleshooting in README.md).
-dir_matlab='/path/to/MATLAB'                     # Path to MATLAB on your machine
-lic_matlab=''                                    # Leave empty if the licence is provided in MATLAB folder (most likely scenario), otherwise provide the license file or the license server
+dir_freesurfer='/path/to/freesurfer'             # Path to FreeSurfer on your machine
 
 # === PREPARATION ===
 
@@ -83,7 +81,7 @@ function run_coregistration_and_submit_manual_pick {
     else
         f_fmap=$(basename "$fmap_coreg_output")
         echo "This run was submitted by manually choosing the B1 map and 3D-QALAS pair" >> $dir_tool/logs/$f_QALAS.log
-        sbatch --output="$dir_tool/logs/$f_QALAS.log" "$dir_tool/submit_CPU.sh" "$sub_ses" "$f_QALAS" "$f_fmap" "$dir_bids" "$dir_tool" "$dir_conda" "$dir_matlab" "$lic_matlab"
+        sbatch --output="$dir_tool/logs/$f_QALAS.log" "$dir_tool/submit_CPU.sh" "$sub_ses" "$f_QALAS" "$f_fmap" "$dir_bids" "$dir_tool" "$dir_conda" "$dir_freesurfer"
         echo $sub_ses 'submitted successfully'
         echo "---------------------------------------------"
     fi
@@ -138,6 +136,3 @@ process_subject_manual_pick "$f_fmap" "$f_QALAS"
 
 # Return to tool directory
 cd "$dir_tool"
-
-
-

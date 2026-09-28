@@ -56,10 +56,15 @@ source exceptions_manual_run_ssl.sh
 
 ## Requirements
 - [Conda](https://docs.conda.io/) for managing Python environments
-- [MATLAB](https://www.mathworks.com/) for input and output handling
 - [Slurm](https://slurm.schedmd.com/) workload manager for job submission on HPC clusters
+- A FreeSurfer installation/module available on your cluster (specifically `mri_synthstrip`) -- needed for every processing run, see [Skull-stripping](#skull-stripping) below. This repo does not bundle or redistribute any FreeSurfer code, license text, or model weights -- you provide your own FreeSurfer, the same as any other external dependency.
 
-No minimal requirements are known, the pipeline has been tested with miniconda3, anaconda3 and MATLAB 2023a.
+Input/output handling is pure Python (`main_data/ssl_qalas_save_h5.py`, `main_data/h5_to_maps.py`) -- no separate license or installation is required for this step. The extra packages this needs (`h5py`, `nibabel`, `scipy`, `scikit-image`, `pydicom`, `ismrmrd`) are already listed in `environment.yml`.
+
+No minimal requirements are known beyond that, the pipeline has been tested with miniconda3 and anaconda3.
+
+## Skull-stripping
+`submit_CPU.sh` skull-strips each 3D-QALAS volume with FreeSurfer's compiled `mri_synthstrip` binary before building the h5 file (`module load FreeSurfer/...`, adjust the module name/version in `submit_CPU.sh` to whatever your cluster provides). Masks are cached at `$dir_tool/synthstrip_mask/` -- if a mask already exists for a given 3D-QALAS run, it's reused instead of re-run.
 
 ## Installation
 The installation of the environment is only needed once, before executing the tool for the first time. It is done with the following script:
@@ -95,8 +100,6 @@ dir_bids='/path/to/bids'                         # Path to BIDS where all the pa
 afi_out=$dir_tool'/afi_b1_maps'                  # Path to the folder where estimated AFI maps should be saved (if applicable) - can be saved within the tool folder
 sum_out=$dir_tool'/overview'                     # Path to the folder where general summaries are stored - can be saved within the tool folder
 dir_conda='/path/to/conda'                       # Path to (mini)conda or to a standalone environment directory (if the environment is not registered in Conda, see Troubleshooting in README.md).
-dir_matlab='/path/to/MATLAB'                     # Path to MATLAB on your machine
-lic_matlab=''                                    # Leave empty if the licence is provided in MATLAB folder (most likely scenario), otherwise provide the license file or the license server
 ```
 
 To run the script processing, create a list of participants that you want to process. The easiest way of doing that may be:
@@ -149,8 +152,6 @@ dir_tool='/path/to/SSL-QALAS-main-crossvendor'   # Path to the folder where SSL-
 dir_bids='/path/to/bids'                         # Path to BIDS where all the participants to be processed are stored
 afi_out=$dir_tool'/afi_b1_maps'                  # Path to the folder where estimated AFI maps should be saved (if applicable) - can be within the tool folder
 dir_conda='/path/to/conda'                       # Path to (mini)conda or to a standalone environment directory (if the environment is not registered in Conda, see Troubleshooting in README.md).
-dir_matlab='/path/to/MATLAB'                     # Path to MATLAB on your machine
-lic_matlab=''                                    # Leave empty if the licence is provided in MATLAB folder (most likely scenario), otherwise provide the license file or the license server
 ```
 
 Once this is done `exceptions_manual_run_ssl.sh` can be executed:
@@ -163,18 +164,18 @@ source exceptions_manual_run_ssl.sh
 The script is going to automatically pre-process the provided pair, unless it already has a log file in `$dir_tool/logs`. Log files act like lock files in this workflow and have to be removed if a 3D-QALAS run should be reprocessed (see [Clean up with `post_fix_failed_logs.sh`](#clean-up-with-post_fix_failed_logssh)). The pre-processing includes the actual AFI B1 map estimation (if applicable) and B1 map coregistration with 3D-QALAS images. It automatically submits `submit_CPU.sh` script for processing the selected 3D-QALAS run to the cluster using Slurm. The processing can be tracked in `$dir_tool/logs`. 
 
 ## Workflow in `submit_CPU.sh`
-The Slurm batch script `submit_CPU.sh` is designed to be submitted to the cluster, so it performs all the processing automatically. The processing has two possibilities: if a checkpoint for a given 3D-QALAS run exists (the 3D-QALAS processing has been interrupted previously) or if a checkpoint doesn't exist. 
+The Slurm batch script `submit_CPU.sh` is designed to be submitted to the cluster, so it performs all the processing automatically. Before either branch below, it skull-strips the 3D-QALAS volume with FreeSurfer's `mri_synthstrip` (skipped if a mask already exists in `$dir_tool/synthstrip_mask/`, same as before) -- see [Skull-stripping](#skull-stripping). The processing then has two possibilities: if a checkpoint for a given 3D-QALAS run exists (the 3D-QALAS processing has been interrupted previously) or if a checkpoint doesn't exist. 
 - When a checkpoint doesn't exist, the processing starts anew. The pipeline executes:
-  - `ssl_qalas_save_h5.m` that converts the 3D-QALAS and B1 maps as well as their metadata into the h5 format that is used for the main SSL-QALAS processing;
+  - `ssl_qalas_save_h5.py` that converts the 3D-QALAS and B1 maps as well as their metadata into the h5 format that is used for the main SSL-QALAS processing;
   - `train_qalas.py` that processes the data in the h5 file and estimates the parametric maps;
   - `inference_qalas_map.py` that produces the parametric maps from the checkpoint with the lowest validation loss;
   - moving the checkpoint to the archive folder `old/` within each run in `$dir_tool/qalas_log/`, that checkpoint won't be considered if re-processing of the run is needed;
-  - 'h5_to_maps.m` that extracts the parametric maps from the h5 file and saves them as NIfTI files in `$dir_tool/matlab/maps`.
+  - `h5_to_maps.py` that extracts the parametric maps from the h5 file and saves them as NIfTI files in `$dir_tool/main_data/maps`.
 - When a checkpoint exists, the processing continues from the available checkpoint. The pipeline executes:
   - `train_qalas.py` that processes the data in the h5 file and estimates the parametric maps starting from the available checkpoint;
   - `inference_qalas_map.py` that produces the parametric maps from the checkpoint with the lowest validation loss;
   - moving the checkpoint to the archive folder `old/` within each run in `$dir_tool/qalas_log/`;
-  - `h5_to_maps.m` that extracts the parametric maps from the h5 file and saves them as NIfTI files in `$dir_tool/matlab/maps`.
+  - `h5_to_maps.py` that extracts the parametric maps from the h5 file and saves them as NIfTI files in `$dir_tool/main_data/maps`.
 
 ## Summary in `overview/`
 Files in `overview/` keep track of what was and wasn't successfully submitted. They are not in a very comprehensive shape yet, but looking at the list of unmatched sessions during execution of `run_ssl.sh` may be useful (it may not be reliable yet):
@@ -184,7 +185,7 @@ cat "$sum_out/no_clear_match.txt" | cut -d"/" -f1-2 | sort | uniq
 ```
 
 ## Output
-Output is saved in `$dir_tool/matlab/maps/sub-*/ses-*/run-*/`, there
+Output is saved in `$dir_tool/main_data/maps/sub-*/ses-*/run-*/`, there
 - `T1_map.nii` - T1 parametric map
 - `T2_map.nii` - T2 parametric map
 - `IE_map.nii` - Inversion Efficiency parametric map

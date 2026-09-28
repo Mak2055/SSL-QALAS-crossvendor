@@ -23,7 +23,7 @@ with open("README.md", encoding="utf8") as f:
     readme = f.read()
 
 install_requires = [
-    "numpy>=1.18.5",
+    "numpy>=1.18.5,<2",
     "scikit_image>=0.16.2",
     "torchvision>=0.8.1",
     "torch>=1.8.0",

@@ -87,6 +87,15 @@ def cli_main(args):
     #trainer = pl.Trainer.from_argparse_args(args, gpus=[0], log_every_n_steps=1) # TODO MAKSIM'S CHANGE 1/2
     trainer = pl.Trainer.from_argparse_args(args, accelerator="cpu", log_every_n_steps=1)
 
+    if args.init_from_checkpoint is not None:
+        try:
+            ckpt = torch.load(str(args.init_from_checkpoint), map_location="cpu", weights_only=False)
+        except TypeError:                      # torch < 1.13
+            ckpt = torch.load(str(args.init_from_checkpoint), map_location="cpu")
+        model.load_state_dict(ckpt["state_dict"])   # strict: a mismatch means the wrong checkpoint
+        print(f"Initialised weights from {args.init_from_checkpoint} "
+              f"(saved at epoch {ckpt.get('epoch')}) -- starting a new fit at epoch 0")
+
     # ------------
     # run
     # ------------
@@ -142,6 +151,15 @@ def build_args():
         default=[4],
         type=int,
         help="Acceleration rates to use for masks",
+    )
+
+    parser.add_argument(
+        "--init_from_checkpoint",
+        default=None,
+        type=pathlib.Path,
+        help="Initialise the network weights from this checkpoint and start a NEW fit "
+             "(epoch 0, fresh optimizer and LR schedule). Unlike --resume_from_checkpoint, "
+             "nothing but the weights is restored.",
     )
 
     # data config
