@@ -61,7 +61,6 @@ function get_qalas_jsons_lists {
 function activate_env {
     source "$dir_conda/bin/activate" ssl_qalas_crossvendor
     export PYTHONNOUSERSITE=1
-    conda-unpack
 }
 
 # Deactivate the conda environment
