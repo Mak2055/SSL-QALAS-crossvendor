@@ -60,7 +60,6 @@ function get_qalas_jsons_lists {
 # Activate the conda environment used for QALAS processing
 function activate_env {
     source "$dir_conda/bin/activate" ssl_qalas_crossvendor
-    export PYTHONNOUSERSITE=1
 }
 
 # Deactivate the conda environment
