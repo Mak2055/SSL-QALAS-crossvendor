@@ -38,7 +38,6 @@ def run_model(batch, model, device):
 #    str_to_pass = args.default_root_dir + '/val_data.h5'
     str_to_pass = str(args.data_path) + '/val_data.h5'
     os.environ["MESSAGE"] = str(str_to_pass)
-    subprocess.run(["python", "script2.py"])
 
     output_t1, output_t2, output_pd, output_ie, output_b1, \
         output_img1, output_img2, output_img3, output_img4, output_img5 = \
